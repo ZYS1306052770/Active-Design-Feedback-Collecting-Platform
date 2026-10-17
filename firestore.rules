@@ -1,0 +1,61 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function validRating(score) {
+      return score == null || (score is int && score >= 1 && score <= 5);
+    }
+    function validRatings(r) {
+      return r is map &&
+        r.keys().hasOnly(['safety','pleasantness','arousal','control','clarity','realism','engagement']) &&
+        r.keys().hasAll(['safety','pleasantness','arousal','control','clarity','realism','engagement']) &&
+        validRating(r.safety) && validRating(r.pleasantness) &&
+        validRating(r.arousal) && validRating(r.control) &&
+        validRating(r.clarity) && validRating(r.realism) && validRating(r.engagement) &&
+        r.safety != null && r.pleasantness != null && r.arousal != null && r.control != null;
+    }
+    function validResponse(d) {
+      return d.keys().hasOnly([
+          'schema_version','response_id','participant_id','scenario_id','checkpoint',
+          'submitted_at_utc','form_elapsed_seconds','ratings','influences','adaptations',
+          'decision_revised','feeling_reason','journey_suggestion','experiment_suggestion',
+          'auth_uid','created_at'
+        ]) &&
+        d.keys().hasAll([
+          'schema_version','response_id','participant_id','scenario_id','checkpoint',
+          'submitted_at_utc','form_elapsed_seconds','ratings','influences','adaptations',
+          'decision_revised','feeling_reason','journey_suggestion','experiment_suggestion',
+          'auth_uid','created_at'
+        ]) &&
+        d.schema_version == '1.0' &&
+        d.response_id is string && d.response_id.size() == 36 &&
+        d.participant_id is string && d.participant_id.matches('^[A-Za-z0-9_-]{4,36}$') &&
+        d.scenario_id is string && d.scenario_id.size() <= 40 &&
+        d.checkpoint in ['before','after_scenario','after_feedback','end'] &&
+        ((d.checkpoint != 'after_scenario' && d.checkpoint != 'after_feedback') || d.scenario_id.size() > 0) &&
+        d.submitted_at_utc is string && d.submitted_at_utc.size() == 24 &&
+        d.form_elapsed_seconds is int && d.form_elapsed_seconds >= 0 && d.form_elapsed_seconds <= 36000 &&
+        validRatings(d.ratings) &&
+        d.influences is list && d.influences.size() <= 7 &&
+        d.influences.hasOnly(['lighting','road_surface','traffic','weather','other_people','route','time_pressure']) &&
+        d.adaptations is list && d.adaptations.size() <= 8 &&
+        d.adaptations.hasOnly(['continue','slow_down','change_route','change_time','change_destination','switch_mode','dismount','cancel']) &&
+        d.decision_revised in ['yes','no','unsure','not_applicable'] &&
+        ((d.checkpoint == 'after_feedback' && d.decision_revised != 'not_applicable') ||
+         (d.checkpoint != 'after_feedback' && d.decision_revised == 'not_applicable')) &&
+        d.feeling_reason is string && d.feeling_reason.size() <= 700 &&
+        d.journey_suggestion is string && d.journey_suggestion.size() <= 700 &&
+        d.experiment_suggestion is string && d.experiment_suggestion.size() <= 700 &&
+        d.auth_uid == request.auth.uid &&
+        d.created_at == request.time;
+    }
+
+    match /study_feedback/{responseDoc} {
+      // Anonymous Firebase Authentication required. Participants can only create;
+      // they cannot read anyone's feedback, edit it, or delete it.
+      allow create: if request.auth != null && validResponse(request.resource.data);
+      allow get, list, update, delete: if false;
+    }
+    // Deny all other collections.
+    match /{path=**} { allow read, write: if false; }
+  }
+}
