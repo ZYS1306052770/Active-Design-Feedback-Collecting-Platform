@@ -1,106 +1,156 @@
-# Night Ride Lab — Participant Experience Tool
+# Active Design Feedback Collection Tool
 
-**A mobile-friendly research feedback website for nighttime e-scooter scenarios.** The app collects perceived safety, affective states, scenario choices, decision revisions and free-text suggestions at repeated experiment checkpoints.
+**A browser-based research tool for collecting participants' opinions, feelings, behavioural responses, and suggestions during active design experiments.**
 
-Designed for **GitHub Pages**. No installation, build step, paid host, or custom server is required to publish the website. Centralized data collection requires your **own Firebase project**, which is configured separately from GitHub. Until Firebase is configured, the app clearly operates in *local test mode* (responses are saved only in that browser).
+The tool supports repeated feedback collection at different experimental checkpoints. It can be used to explore how participants perceive an environment or scenario, how their experience changes, and whether new information leads them to reconsider their decisions.
 
-## 1. Publish on GitHub Pages
+The website is responsive and can be hosted on **GitHub Pages** without a build step. It works in **local test mode** immediately. To receive responses from multiple participants in a central database, researchers must configure their own **Firebase** project.
 
-1. Create a new GitHub repository, e.g. `night-ride-feedback`.
-2. Upload **all files in this folder into the root of the repository** (do **not** upload the ZIP as a single file). Commit them to `main`.
-3. Open the repository's **Settings → Pages**.
-4. Set **Source** to **Deploy from a branch**, branch **main**, folder **/(root)**. Click **Save**.
-5. Open `https://YOUR-USERNAME.github.io/night-ride-feedback/` once Pages has published.
+> **Research use:** This is a configurable feedback component, not a complete experimental platform or a substitute for an ethics-approved participant information and consent process. The current question set includes mobility and environmental-condition examples; adapt the wording and response options to your specific active design study before deployment.
 
-You will immediately see the website in **Local test mode**; this is for interface testing only, not a real multi-participant study. In local test mode the user can export CSV/JSON from their own browser. **The research team will not receive participant data until Firebase is configured.**
+## What the tool collects
 
-To test locally with a web server (needed for ES modules):
+| Feedback category | Recorded information |
+| --- | --- |
+| Participant and experimental context | Pseudonymous participant code, scenario or round, feedback checkpoint |
+| Perception and feelings | Five-point ratings of perceived safety, pleasantness, arousal/activation, and perceived control |
+| Environmental influences | Participants' selections of conditions that affect their experiences |
+| Behavioural responses | Selected adaptations or decisions in response to a scenario |
+| Decision reconsideration | Whether feedback changed the participant's decision |
+| Qualitative feedback | Explanations of feelings and suggestions for improving the environment, activity, or experiment |
+| End-of-experiment evaluation | Optional ratings of clarity, realism, and engagement |
+
+Supported checkpoints are `before`, `after_scenario`, `after_feedback`, and `end`. A separate record is generated for every submission, so a participant's responses can be compared across multiple rounds.
+
+## Repository contents
+
+| File | Purpose |
+| --- | --- |
+| `index.html` | User interface, instructions, question wording, styling, and form elements |
+| `app.js` | Data validation, form behaviour, local test storage, and export functions |
+| `firebase-client.js` | Firebase connection and submission logic |
+| `firebase-config.js` | Public Firebase web application configuration (to be completed by the researcher) |
+| `firestore.rules` | Firestore security rules for submitted feedback |
+| `export_firestore.py` | Researcher-side utility to export stored responses to CSV and JSON |
+| `DATA_DICTIONARY.md` | Descriptions of the collected variables and response fields |
+| `README.md` | Project documentation and setup instructions |
+
+## 1. Publish the website using GitHub Pages
+
+1. Create a GitHub repository or open an existing one.
+2. Upload the project files to the repository root (next to `README.md`), rather than uploading the ZIP file itself.
+3. Commit the files to the `main` branch.
+4. In the repository, go to **Settings → Pages**.
+5. Choose **Deploy from a branch** and select **`main` → `/(root)`**, then click **Save**.
+6. Once the site is published, visit:
+
+   ```text
+   https://YOUR-USERNAME.github.io/YOUR-REPOSITORY-NAME/
+   ```
+
+If Firebase has not been configured, the website displays **Local test mode**. Submissions are stored **only in the participant's browser**, not sent to the research team. This is appropriate for previewing or testing the interface, **not for centrally collecting real study responses**.
+
+For local development, serve the project folder over HTTP (the JavaScript uses browser modules):
 
 ```bash
-cd night-ride-feedback
 python -m http.server 8000
-# Visit http://localhost:8000
+# Open http://localhost:8000 in your browser
 ```
 
-## 2. Enable central collection using Firebase (required for participant recruitment)
+## 2. Configure central response collection with Firebase
 
-1. Go to [Firebase Console](https://console.firebase.google.com/) and create a Firebase project under your institution's approved data-management arrangement.
-2. Register a **Web app** from the project settings. Copy its **firebaseConfig** object.
-3. Open `firebase-config.js` and paste the `apiKey`, `authDomain`, `projectId`, and `appId` values into the existing fields. You may include other standard Firebase configuration fields if supplied. **Do not put service account private keys in this file.** A Firebase web app config is designed to be public; security depends on Authentication, App Check and Firestore Security Rules.
-4. Firebase Console → **Authentication → Sign-in method**: enable **Anonymous** sign-in. Respondents will not need a Firebase or Google account.
-5. Firebase Console → **Firestore Database**: create a database in an institutionally acceptable location (consider an EU region, subject to your data-protection review). Do not use open/test security rules for production.
-6. Firebase Console → **Firestore Database → Rules**: replace the rules with the contents of the included `firestore.rules` file and click **Publish**. These rules allow authenticated participants to **create** validated feedback entries but **not read, update, or delete** any feedback. The research team can access records through its authorized Firebase Console or Admin SDK.
-7. Commit the edited `firebase-config.js` to GitHub, wait for your Pages site to republish, and refresh it. The badge should now say **Live collection**.
-8. Test a submission using a fake participant code. In Firebase Console → Firestore Database → Data, confirm that the `study_feedback` collection contains the test record. Verify that non-researchers cannot browse records from the website. Remove test responses through the console before recruitment.
+GitHub Pages hosts the interface but does not provide a database. Firebase is optional for interface testing and **required for the project's built-in online response-collection workflow**.
 
-**If submission fails**, the form retains the participant's input and displays an error. Check the browser console, Firebase Auth anonymous provider, Firestore rules, and project settings. It never falsely claims that a failed cloud submission was saved.
+1. In the [Firebase Console](https://console.firebase.google.com/), create a project under an institutionally approved research-data arrangement.
+2. Register a **Web app** and obtain its Firebase web configuration.
+3. Enter its `apiKey`, `authDomain`, `projectId`, and `appId` values in `firebase-config.js`.
+4. Under **Authentication → Sign-in method**, enable **Anonymous** authentication. Participants do not need to sign in with a personal account.
+5. Under **Firestore Database**, create a database in a region approved for your project. **Do not use unrestricted test-mode rules for real data collection.**
+6. In **Firestore Database → Rules**, deploy the contents of the included `firestore.rules` file.
+7. Commit the updated `firebase-config.js` to GitHub and refresh the deployed website. It should display **Live collection**.
+8. Submit a test response using a dummy participant code. Check that the record appears in Firestore's `study_feedback` collection, and confirm that participants cannot read existing responses. Remove test responses before recruitment.
 
-**Production security note:** Anonymous Authentication is not a spam-prevention measure. Consider enabling [Firebase App Check](https://firebase.google.com/docs/app-check), quotas, budget alerts, and institutional monitoring before sharing publicly. Deploy and test restrictions in a staging project first. The example rules prevent participant reads but do not prevent deliberate flooding by new anonymous users.
+The supplied Firestore rules are intended to permit validated new submissions while denying client-side reads, updates, and deletions of collected responses. Researchers access the data through authorised administration tools.
 
-## 3. How participants use it
+**Security considerations:** Never place service-account credentials, private keys, or actual participant data in the GitHub repository. Firebase's public web configuration is not a private credential. However, anonymous authentication alone does not prevent spam or automated submissions. Review Firebase App Check, usage limits, security rules, and institutional data-security requirements before public recruitment.
 
-- Enter or keep the pseudonymous **Participant code**, consistent across rounds.
-- Select a **checkpoint**: `before`, `after_scenario`, `after_feedback`, `end`.
-- Enter the scenario/round identifier for scenario checkpoints.
-- Record four 5-point ratings: **perceived safety, pleasantness, activation/arousal, control**.
-- Optionally identify contextual influences; select behavioural adaptations; explain feelings; and suggest changes to both journey design and the experiment.
-- At `after_feedback`, record whether the feedback changed the decision.
-- At `end`, optionally rate **clarity, realism, engagement**.
-- Tick the study information/consent confirmation and submit.
+## 3. Participant workflow
 
-The form accepts URL prefill parameters, convenient for linking it from a Serious Game/stated-adaptation platform:
+1. Open the experiment feedback website.
+2. Enter or retain a **pseudonymous participant code**; use the same code for the same participant across checkpoints.
+3. Select an experiment checkpoint and, where appropriate, provide a scenario or round identifier.
+4. Rate perceived safety, pleasantness, arousal, and control on the five-point scales.
+5. Select relevant environmental influences and behavioural responses, where applicable.
+6. Explain the experience and provide improvement suggestions in the optional text fields.
+7. After feedback is shown, indicate whether the participant reconsidered their decision; at the end of the experiment, optionally evaluate the study experience.
+8. Confirm the approved study-information/consent statement and submit.
 
+To prefill participant and scenario details from another experimental interface, use URL parameters:
+
+```text
+https://YOUR-USERNAME.github.io/YOUR-REPOSITORY-NAME/?pid=P-ABCD1234&scenario=S04&stage=after_scenario
+https://YOUR-USERNAME.github.io/YOUR-REPOSITORY-NAME/?pid=P-ABCD1234&scenario=S04&stage=after_feedback
+https://YOUR-USERNAME.github.io/YOUR-REPOSITORY-NAME/?pid=P-ABCD1234&stage=end
 ```
-https://YOUR-USERNAME.github.io/night-ride-feedback/?pid=P-ABCD1234&scenario=S04&stage=after_scenario
-https://YOUR-USERNAME.github.io/night-ride-feedback/?pid=P-ABCD1234&scenario=S04&stage=after_feedback
-https://YOUR-USERNAME.github.io/night-ride-feedback/?pid=P-ABCD1234&stage=end
-```
 
-`pid` is restricted to 4–36 letters, digits, `_` or `-`; `scenario` to 40 characters; and `stage` to one of the four codes. A code is generated on a user's first visit and retained on that device unless they choose **New code**. Participants using a shared device should be assigned unique codes by the research team and should use the `pid` link for each session.
+Accepted `stage` values are `before`, `after_scenario`, `after_feedback`, and `end`. The participant code may contain 4–36 letters, digits, hyphens, or underscores. The scenario identifier can contain up to 40 characters.
 
-## 4. Export analysis-ready data
+## 4. Export collected feedback
 
-### For local testing (no Firebase)
+### Local test mode
 
-Use **Export test CSV** or **Export JSON** at the bottom of the page. These files exist only on the device on which the answers were entered. Browser data can be deleted by the user or browser; therefore **local mode is unsuitable for centrally collecting real responses**.
+Use **Export test CSV** or **Export JSON** in the website interface. These files contain only responses saved in the current browser. They are not accessible to researchers on another device unless transferred separately.
 
-### For live Firebase collection
+### Online collection mode
 
-Research administrators can inspect and delete records in the Firebase Console. The repository also includes a small *researcher-side* Python exporter:
+Authorised researchers can inspect records in Firebase and use the supplied `export_firestore.py` script from a trusted computer.
 
 ```bash
 pip install firebase-admin
-# Set GOOGLE_APPLICATION_CREDENTIALS to an authorized service-account key
-# stored OUTSIDE the GitHub repository and outside any publicly served folder.
+
+# Store your authorised service-account key securely OUTSIDE the repository.
 export GOOGLE_APPLICATION_CREDENTIALS=/secure/private/location/service-account.json
+
 python export_firestore.py --project YOUR_FIREBASE_PROJECT_ID
 ```
 
-The exporter creates timestamped CSV and JSON files in `exports/` and leaves out Firebase Authentication UIDs. Only run it on the researcher's trusted computer. The `.gitignore` prevents `*.csv`, `*.json` and `exports/` from being committed by default, but you must still **never copy any keys or real research responses into your public GitHub Pages folder**.
+On Windows, configure the equivalent `GOOGLE_APPLICATION_CREDENTIALS` environment variable for your shell. The script writes timestamped **CSV** and **JSON** files into an `exports/` folder. Consult [DATA_DICTIONARY.md](DATA_DICTIONARY.md) for field definitions. Responses can be linked by `participant_id`, `scenario_id`, and `checkpoint`.
 
-CSV columns are documented in [DATA_DICTIONARY.md](DATA_DICTIONARY.md). One submitted form is one row; repeated entries are linked by `participant_id`, `scenario_id` and `checkpoint`.
+The `.gitignore` file helps keep generated exports out of version control. **Never upload real participant responses or private service-account credentials to a public repository.**
 
-## 5. Change the questions and experiment wording
+## 5. Adapt the tool for other active design experiments
 
-- **`index.html`** — wording, options, layout and colors. Search for the question labels.
-- **`app.js`** — form logic, validation, exports and data structure.
-- **`firebase-client.js`** — online submission.
-- **`firebase-config.js`** — Firebase web app configuration only.
-- **`firestore.rules`** — cloud permissions and accepted fields. **If you add/rename stored fields, update these security rules and the exporter.**
+You can customise the website for participatory design, built-environment assessment, active mobility, public-space evaluation, or other scenario-based studies.
 
-This tool is a **feedback and decision checkpoint**, not a replacement for the underlying Serious Game or SA experiment. It records the elapsed time since this page was opened/reset; this is **not** validated time-to-first-decision, adaptation order, route travel time, or in-game timestamp. Those measures should be instrumented separately within the SG/SA engine if needed in your study.
+- Update `index.html` to change titles, terminology, question wording, scale descriptions, and selectable response options.
+- Update `app.js` when changing how responses are processed, validated, or exported.
+- Update `firestore.rules` when adding, removing, or renaming stored response fields; otherwise valid submissions may be rejected.
+- Update `export_firestore.py` and `DATA_DICTIONARY.md` to keep your exports and research documentation consistent with any schema changes.
+- Pilot the full workflow on mobile and desktop before using it with participants.
 
-## 6. Before running a real human-participant study
+**Measurement note:** `form_elapsed_seconds` is the time elapsed in the feedback form. It is **not** a validated time-to-first-decision measure, a log of behavioural adaptation order, or a record of in-game interactions. Collect those measures separately in the experiment platform if required.
 
-**Important: The default consent text is a placeholder, not ethics-approved consent.** Replace it with approved study information, a suitable privacy notice and appropriate consent/withdrawal procedure. Consider accessibility, pilot testing, institution-specific approvals, EU GDPR obligations, data retention, cross-border processing, and DPA/data-processing agreements for GitHub/Firebase. Pseudonymous participant IDs and responses may still be personal data under GDPR. Participants should not disclose real names, email addresses, home/work addresses or exact routes in free text. GitHub Pages is a **publicly accessible website**, even for private repositories on plans that support Pages.
+## 6. Ethics, accessibility, and data protection
 
-The implemented Firestore rules prevent ordinary client-side participant reads, but no website alone establishes research ethics approval or full GDPR compliance. Have the institutional data steward and ethics committee review the design and hosting before deployment.
+Before involving research participants:
 
-## Technology & official guidance
+- Replace the example consent text with **institutionally approved participant information, consent wording, and withdrawal procedures**.
+- Complete the appropriate ethics review and research data-management assessment.
+- Assess privacy, retention, hosting location, international data transfers, and any applicable GDPR responsibilities. Pseudonymous responses can still be personal data.
+- Ask participants **not** to enter names, contact details, exact addresses, or other directly identifying information into free-text fields.
+- Check accessibility, comprehension of rating scales, mobile usability, and response burden in a pilot.
 
-Uses vanilla HTML/CSS/JavaScript and Firebase's modular browser SDK. No tracking/analytics libraries are included.
+This repository provides a technical starting point; it does **not** itself establish legal compliance or research ethics approval.
 
-- [GitHub Pages publishing source](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
-- [Firebase JavaScript setup](https://firebase.google.com/docs/web/setup)
-- [Firebase anonymous authentication](https://firebase.google.com/docs/auth/web/anonymous-auth)
-- [Cloud Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started)
+## Technology and documentation
+
+Built with standard **HTML, CSS, and JavaScript**, with **Firebase Authentication** and **Cloud Firestore** available for centralised storage. No build framework or dedicated application server is needed to host the interface.
+
+- [GitHub Pages setup](https://docs.github.com/en/pages/getting-started-with-github-pages/configuring-a-publishing-source-for-your-github-pages-site)
+- [Firebase web setup](https://firebase.google.com/docs/web/setup)
+- [Anonymous authentication](https://firebase.google.com/docs/auth/web/anonymous-auth)
+- [Firestore Security Rules](https://firebase.google.com/docs/firestore/security/get-started)
+
+---
+
+*Active Design Feedback Collection Tool — a configurable research instrument for evaluating participants' experiences and responses during experiments.*
